@@ -1,4 +1,4 @@
-#if !os(Windows) && !os(Linux)
+#if !os(Linux)
   import Foundation
   @preconcurrency import KeychainAccess
 

@@ -146,7 +146,7 @@ final class RequestsTests: XCTestCase {
     }
   }
 
-  #if !os(Windows) && !os(Linux)
+  #if !os(Linux)
     // For some reason this crashes the testing bundle
     // on Linux and Windows, skipping it.
     func testSessionFromURL() async throws {
