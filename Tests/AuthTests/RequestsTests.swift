@@ -11,10 +11,6 @@ import XCTest
 
 @testable import Auth
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 struct UnimplementedError: Error {}
 
 final class RequestsTests: XCTestCase {
@@ -146,17 +142,16 @@ final class RequestsTests: XCTestCase {
     }
   }
 
-  #if !os(Linux)
-    // For some reason this crashes the testing bundle
-    // on Linux and Windows, skipping it.
-    func testSessionFromURL() async throws {
-      let sut = makeSUT(fetch: { request in
-        let authorizationHeader = request.allHTTPHeaderFields?["Authorization"]
-        XCTAssertEqual(authorizationHeader, "bearer accesstoken")
-        return (json(named: "user"), HTTPURLResponse())
-      })
+  // For some reason this crashes the testing bundle
+  // on Linux and Windows, skipping it.
+  func testSessionFromURL() async throws {
+    let sut = makeSUT(fetch: { request in
+      let authorizationHeader = request.allHTTPHeaderFields?["Authorization"]
+      XCTAssertEqual(authorizationHeader, "bearer accesstoken")
+      return (json(named: "user"), HTTPURLResponse())
+    })
 
-      let currentDate = Date()
+    let currentDate = Date()
 
       Current.sessionManager = .live
       Current.sessionStorage.storeSession = { _ in }
@@ -179,7 +174,7 @@ final class RequestsTests: XCTestCase {
       )
       XCTAssertEqual(session, expectedSession)
     }
-  #endif
+  }
 
   func testSessionFromURLWithMissingComponent() async {
     let sut = makeSUT()

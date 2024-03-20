@@ -4,10 +4,6 @@ import ConcurrencyExtras
 
 public typealias PostgrestError = _Helpers.PostgrestError
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 /// PostgREST client.
 public final class PostgrestClient: Sendable {
   public typealias FetchHandler = @Sendable (_ request: URLRequest) async throws -> (

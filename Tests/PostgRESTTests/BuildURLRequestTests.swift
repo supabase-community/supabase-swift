@@ -6,16 +6,11 @@ import XCTest
 
 @testable import PostgREST
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 struct User: Encodable {
   var email: String
   var username: String?
 }
 
-@MainActor
 final class BuildURLRequestTests: XCTestCase {
   let url = URL(string: "https://example.supabase.co")!
 
@@ -55,7 +50,7 @@ final class BuildURLRequestTests: XCTestCase {
       fetch: { request in
         guard let runningTestCase = await runningTestCase.value else {
           XCTFail("execute called without a runningTestCase set.")
-          return (Data(), URLResponse.empty())
+          return (Data(), URLResponse())
         }
 
         await MainActor.run { [runningTestCase] in
@@ -70,7 +65,7 @@ final class BuildURLRequestTests: XCTestCase {
           )
         }
 
-        return (Data(), URLResponse.empty())
+        return (Data(), URLResponse())
       },
       encoder: encoder
     )
@@ -180,24 +175,5 @@ final class BuildURLRequestTests: XCTestCase {
     let client = PostgrestClient(url: url, schema: nil, logger: nil)
     let clientInfoHeader = client.configuration.headers["X-Client-Info"]
     XCTAssertNotNil(clientInfoHeader)
-  }
-}
-
-extension URLResponse {
-  // Linux don't have the ability to empty initialize a URLResponse like `URLResponse()`
-  // so
-  // We provide a function that can give us the right value on an platform.
-  // See https://github.com/apple/swift-corelibs-foundation/pull/4778
-  fileprivate static func empty() -> URLResponse {
-    #if os(Linux)
-      URLResponse(
-        url: .init(string: "https://supabase.com")!,
-        mimeType: nil,
-        expectedContentLength: 0,
-        textEncodingName: nil
-      )
-    #else
-      URLResponse()
-    #endif
   }
 }

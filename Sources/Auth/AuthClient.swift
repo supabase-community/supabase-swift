@@ -1,10 +1,6 @@
 import Foundation
 @_spi(Internal) import _Helpers
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 public actor AuthClient {
   /// FetchHandler is a type alias for asynchronous network request handling.
   public typealias FetchHandler = @Sendable (

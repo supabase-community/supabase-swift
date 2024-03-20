@@ -1,10 +1,6 @@
 import Foundation
 @_spi(Internal) import _Helpers
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 /// Storage Bucket API
 public class StorageBucketApi: StorageApi {
   /// Retrieves the details of all Storage buckets within an existing product.

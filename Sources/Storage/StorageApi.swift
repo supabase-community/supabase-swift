@@ -1,10 +1,6 @@
 import Foundation
 @_spi(Internal) import _Helpers
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 public class StorageApi: @unchecked Sendable {
   public let configuration: StorageClientConfiguration
 

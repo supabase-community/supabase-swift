@@ -22,10 +22,6 @@ import Foundation
 @_spi(Internal) import _Helpers
 import ConcurrencyExtras
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 public enum SocketError: Error {
   case abnormalClosureError
 }
@@ -131,17 +127,14 @@ public class RealtimeClient: PhoenixTransportDelegate {
   /// must be set before calling `socket.connect()` in order to be applied
   public var disableSSLCertValidation: Bool = false
 
-  #if os(Linux)
-  #else
-    /// Configure custom SSL validation logic, eg. SSL pinning. This
-    /// must be set before calling `socket.connect()` in order to apply.
-    //  public var security: SSLTrustValidator?
+  /// Configure custom SSL validation logic, eg. SSL pinning. This
+  /// must be set before calling `socket.connect()` in order to apply.
+  //  public var security: SSLTrustValidator?
 
-    /// Configure the encryption used by your client by setting the
-    /// allowed cipher suites supported by your server. This must be
-    /// set before calling `socket.connect()` in order to apply.
-    public var enabledSSLCipherSuites: [SSLCipherSuite]?
-  #endif
+  /// Configure the encryption used by your client by setting the
+  /// allowed cipher suites supported by your server. This must be
+  /// set before calling `socket.connect()` in order to apply.
+  public var enabledSSLCipherSuites: [SSLCipherSuite]?
 
   // ----------------------------------------------------------------------
 

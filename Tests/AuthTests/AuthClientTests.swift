@@ -12,10 +12,6 @@ import TestHelpers
 
 @testable import Auth
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 final class AuthClientTests: XCTestCase {
   var eventEmitter: Auth.EventEmitter!
   var sessionManager: SessionManager!

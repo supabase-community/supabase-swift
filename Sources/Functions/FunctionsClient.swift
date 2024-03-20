@@ -1,10 +1,6 @@
 import Foundation
 @_spi(Internal) import _Helpers
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 let version = _Helpers.version
 
 /// An actor representing a client for invoking functions.

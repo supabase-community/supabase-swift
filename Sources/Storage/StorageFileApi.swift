@@ -1,10 +1,6 @@
 import Foundation
 @_spi(Internal) import _Helpers
 
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
-
 let DEFAULT_SEARCH_OPTIONS = SearchOptions(
   limit: 100,
   offset: 0,
