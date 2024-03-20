@@ -34,20 +34,6 @@ jobs:
       - name: Build for library evolution
         run: make build-for-library-evolution
 
-  library-linux:
-    runs-on: ubuntu-latest
-    name: Test Library (Linux)
-    strategy:
-      matrix:
-        swift-version: ["5.9", "5.10"]
-    steps:
-      - uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "${{ matrix.swift-version }}"
-      - uses: actions/checkout@v3
-      - name: Run Tests
-        run: swift test
-
   examples:
     runs-on: macos-14
     name: Build Examples
