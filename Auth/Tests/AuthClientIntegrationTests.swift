@@ -254,7 +254,7 @@ final class AuthClientIntegrationTests: XCTestCase {
 
     try await block()
 
-    await fulfillment(of: [expectation], timeout: 5)
+    await fulfillment(of: [expectation], timeout: 0.5)
 
     XCTAssertNoDifference(events, receivedEvents.value)
 
