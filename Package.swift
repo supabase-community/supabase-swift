@@ -72,8 +72,7 @@ let package = Package(
     ),
     .target(
       name: "Auth",
-      dependencies: goTrueDependencies,
-      path: "Auth/Sources"
+      dependencies: goTrueDependencies
     ),
     .testTarget(
       name: "AuthTests",
@@ -85,7 +84,6 @@ let package = Package(
         .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
         .product(name: "CustomDump", package: "swift-custom-dump"),
       ],
-      path: "Auth/Tests",
       exclude: [
         "__Snapshots__",
       ],
