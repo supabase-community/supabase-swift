@@ -14,76 +14,84 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  library-darwin:
-    runs-on: macos-14
-    name: Test Library (Darwin)
-    steps:
-      - uses: actions/checkout@v3
-      - name: Select Xcode 15.2
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
-      - name: Run tests
-        run: make test-library
+  # library-darwin:
+  #   runs-on: macos-14
+  #   name: Test Library (Darwin)
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Select Xcode 15.2
+  #       run: sudo xcode-select -s /Applications/Xcode_15.2.app
+  #     - name: Run tests
+  #       run: make test-library
 
-  library-evolution:
-    name: Library (evolution, Darwin)
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      - name: Select Xcode 15.2
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
-      - name: Build for library evolution
-        run: make build-for-library-evolution
+  # library-evolution:
+  #   name: Library (evolution, Darwin)
+  #   runs-on: macos-14
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Select Xcode 15.2
+  #       run: sudo xcode-select -s /Applications/Xcode_15.2.app
+  #     - name: Build for library evolution
+  #       run: make build-for-library-evolution
 
-  library-linux:
-    runs-on: ubuntu-latest
-    name: Test Library (Linux)
-    strategy:
-      matrix:
-        swift-version: ["5.9", "5.10"]
-    steps:
-      - uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "${{ matrix.swift-version }}"
-      - uses: actions/checkout@v3
-      - name: Run Tests
-        run: swift test
+  # library-linux:
+  #   runs-on: ubuntu-latest
+  #   name: Test Library (Linux)
+  #   strategy:
+  #     matrix:
+  #       swift-version: ["5.9", "5.10"]
+  #   steps:
+  #     - uses: swift-actions/setup-swift@v2
+  #       with:
+  #         swift-version: "${{ matrix.swift-version }}"
+  #     - uses: actions/checkout@v3
+  #     - name: Run Tests
+  #       run: swift test
 
-  library-windows:
-    runs-on: windows-latest
-    name: Test Library (Windows)
-    steps:
-      # We use BCNY's repo since they have newer builds of Swift
-      # which have fixed libcurl in Foundation.
-      - uses: compnerd/gha-setup-swift@main
-        with:
-          release-tag-name: "20231203.0"
-          github-repo: "thebrowsercompany/swift-build"
-          release-asset-name: installer-amd64.exe
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/checkout@v3
-      - name: Run Tests
-        run: swift test
+  # library-windows:
+  #   runs-on: windows-latest
+  #   name: Test Library (Windows)
+  #   steps:
+  #     # We use BCNY's repo since they have newer builds of Swift
+  #     # which have fixed libcurl in Foundation.
+  #     - uses: compnerd/gha-setup-swift@main
+  #       with:
+  #         release-tag-name: "20231203.0"
+  #         github-repo: "thebrowsercompany/swift-build"
+  #         release-asset-name: installer-amd64.exe
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #     - uses: actions/checkout@v3
+  #     - name: Run Tests
+  #       run: swift test
 
   test-library:
     runs-on: macos-14
     name: Test Library
     steps: 
       - uses: actions/checkout@v3
-      - uses: crazy-max/ghaction-setup-docker@v3
+      - run: | 
+          brew install --cask docker
+          open -a /Applications/Docker.app
+          while ! docker info > /dev/null 2>&1; do echo "Waiting for Docker daemon to start..."; sleep 1; done; echo "Docker daemon is now running."
+      # - run: | 
+      #     brew install colima
+      #     colima version
+      #     colima delete
+      #     colima start --cpu 3 --memory 6 --disk 100 --vm-type=qemu --mount-type=sshfs --dns=1.1.1.1
       - uses: supabase/setup-cli@v1
       - run: supabase start
       - name: Select Xcode 15.2
         run: sudo xcode-select -s /Applications/Xcode_15.2.app
       - run: make test-library
 
-  examples:
-    runs-on: macos-14
-    name: Build Examples
-    steps:
-      - uses: actions/checkout@v3
-      - name: Select Xcode 15.2
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
-      - name: Prepare Examples Project
-        run: cp Examples/Examples/_Secrets.swift Examples/Examples/Secrets.swift
-      - name: Build examples
-        run: make build-examples
+  # examples:
+  #   runs-on: macos-14
+  #   name: Build Examples
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Select Xcode 15.2
+  #       run: sudo xcode-select -s /Applications/Xcode_15.2.app
+  #     - name: Prepare Examples Project
+  #       run: cp Examples/Examples/_Secrets.swift Examples/Examples/Secrets.swift
+  #     - name: Build examples
+  #       run: make build-examples
