@@ -116,6 +116,7 @@ let package = Package(
       name: "RealtimeTests",
       dependencies: [
         "Realtime",
+        "PostgREST",
         "TestHelpers",
         .product(name: "CustomDump", package: "swift-custom-dump"),
       ]

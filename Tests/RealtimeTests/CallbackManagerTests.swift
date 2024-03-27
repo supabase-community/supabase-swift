@@ -9,7 +9,6 @@ import ConcurrencyExtras
 import CustomDump
 @testable import Realtime
 import XCTest
-@_spi(Internal) import _Helpers
 
 final class CallbackManagerTests: XCTestCase {
   func testIntegration() {
