@@ -69,10 +69,11 @@ jobs:
     name: Test Library
     steps: 
       - uses: actions/checkout@v3
-      - name: Select Xcode 15.2
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      - uses: crazy-max/ghaction-setup-docker@v3
       - uses: supabase/setup-cli@v1
       - run: supabase start
+      - name: Select Xcode 15.2
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app
       - run: make test-library
 
   examples:
