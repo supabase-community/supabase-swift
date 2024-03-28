@@ -130,7 +130,7 @@ final class RequestsTests: XCTestCase {
       url,
       URL(
         string:
-        "http://localhost:54321/auth/v1/authorize?provider=github&scopes=read,write&redirect_to=https://dummy-url.com/redirect&extra_key=extra_value"
+          "http://localhost:54321/auth/v1/authorize?provider=github&scopes=read,write&redirect_to=https://dummy-url.com/redirect&extra_key=extra_value"
       )!
     )
   }
@@ -153,27 +153,26 @@ final class RequestsTests: XCTestCase {
 
     let currentDate = Date()
 
-      Current.sessionManager = .live
-      Current.sessionStorage.storeSession = { _ in }
-      Current.codeVerifierStorage.getCodeVerifier = { nil }
-      Current.currentDate = { currentDate }
+    Current.sessionManager = .live
+    Current.sessionStorage.storeSession = { _ in }
+    Current.codeVerifierStorage.getCodeVerifier = { nil }
+    Current.currentDate = { currentDate }
 
-      let url = URL(
-        string:
+    let url = URL(
+      string:
         "https://dummy-url.com/callback#access_token=accesstoken&expires_in=60&refresh_token=refreshtoken&token_type=bearer"
-      )!
+    )!
 
-      let session = try await sut.session(from: url)
-      let expectedSession = Session(
-        accessToken: "accesstoken",
-        tokenType: "bearer",
-        expiresIn: 60,
-        expiresAt: currentDate.addingTimeInterval(60).timeIntervalSince1970,
-        refreshToken: "refreshtoken",
-        user: User(fromMockNamed: "user")
-      )
-      XCTAssertEqual(session, expectedSession)
-    }
+    let session = try await sut.session(from: url)
+    let expectedSession = Session(
+      accessToken: "accesstoken",
+      tokenType: "bearer",
+      expiresIn: 60,
+      expiresAt: currentDate.addingTimeInterval(60).timeIntervalSince1970,
+      refreshToken: "refreshtoken",
+      user: User(fromMockNamed: "user")
+    )
+    XCTAssertEqual(session, expectedSession)
   }
 
   func testSessionFromURLWithMissingComponent() async {
@@ -183,7 +182,7 @@ final class RequestsTests: XCTestCase {
 
     let url = URL(
       string:
-      "https://dummy-url.com/callback#access_token=accesstoken&expires_in=60&refresh_token=refreshtoken"
+        "https://dummy-url.com/callback#access_token=accesstoken&expires_in=60&refresh_token=refreshtoken"
     )!
 
     do {
@@ -201,7 +200,7 @@ final class RequestsTests: XCTestCase {
     let sut = makeSUT()
 
     let accessToken =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjo0ODUyMTYzNTkzLCJzdWIiOiJmMzNkM2VjOS1hMmVlLTQ3YzQtODBlMS01YmQ5MTlmM2Q4YjgiLCJlbWFpbCI6ImhpQGJpbmFyeXNjcmFwaW5nLmNvIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6e30sInJvbGUiOiJhdXRoZW50aWNhdGVkIn0.UiEhoahP9GNrBKw_OHBWyqYudtoIlZGkrjs7Qa8hU7I"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjo0ODUyMTYzNTkzLCJzdWIiOiJmMzNkM2VjOS1hMmVlLTQ3YzQtODBlMS01YmQ5MTlmM2Q4YjgiLCJlbWFpbCI6ImhpQGJpbmFyeXNjcmFwaW5nLmNvIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6e30sInJvbGUiOiJhdXRoZW50aWNhdGVkIn0.UiEhoahP9GNrBKw_OHBWyqYudtoIlZGkrjs7Qa8hU7I"
 
     await assert {
       try await sut.setSession(accessToken: accessToken, refreshToken: "dummy-refresh-token")
@@ -212,7 +211,7 @@ final class RequestsTests: XCTestCase {
     let sut = makeSUT()
 
     let accessToken =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNjQ4NjQwMDIxLCJzdWIiOiJmMzNkM2VjOS1hMmVlLTQ3YzQtODBlMS01YmQ5MTlmM2Q4YjgiLCJlbWFpbCI6ImhpQGJpbmFyeXNjcmFwaW5nLmNvIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6e30sInJvbGUiOiJhdXRoZW50aWNhdGVkIn0.CGr5zNE5Yltlbn_3Ms2cjSLs_AW9RKM3lxh7cTQrg0w"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNjQ4NjQwMDIxLCJzdWIiOiJmMzNkM2VjOS1hMmVlLTQ3YzQtODBlMS01YmQ5MTlmM2Q4YjgiLCJlbWFpbCI6ImhpQGJpbmFyeXNjcmFwaW5nLmNvIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6e30sInJvbGUiOiJhdXRoZW50aWNhdGVkIn0.CGr5zNE5Yltlbn_3Ms2cjSLs_AW9RKM3lxh7cTQrg0w"
 
     await assert {
       try await sut.setSession(accessToken: accessToken, refreshToken: "dummy-refresh-token")
