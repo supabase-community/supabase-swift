@@ -64,6 +64,26 @@ jobs:
       - name: Run Tests
         run: swift test
 
+  # test-library:
+  #   runs-on: macos-14
+  #   name: Test Library
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - run: |
+  #         brew install --cask docker
+  #         open -a /Applications/Docker.app
+  #         while ! docker info > /dev/null 2>&1; do echo "Waiting for Docker daemon to start..."; sleep 1; done; echo "Docker daemon is now running."
+  #     - run: |
+  #         brew install colima
+  #         colima version
+  #         colima delete
+  #         colima start --cpu 3 --memory 6 --disk 100 --vm-type=qemu --mount-type=sshfs --dns=1.1.1.1
+  #     - uses: supabase/setup-cli@v1
+  #     - run: supabase start
+  #     - name: Select Xcode 15.2
+  #       run: sudo xcode-select -s /Applications/Xcode_15.2.app
+  #     - run: make test-library
+
   examples:
     runs-on: macos-14
     name: Build Examples
