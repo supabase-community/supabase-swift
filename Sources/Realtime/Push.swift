@@ -38,7 +38,7 @@ actor Push {
 
       return .ok
     } catch {
-      await channel?.socket?.config.logger?.debug(
+      channel?.socket?.config.logger?.debug(
         """
         Failed to send message:
         \(message)

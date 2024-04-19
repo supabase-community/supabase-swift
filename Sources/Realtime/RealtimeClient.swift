@@ -17,7 +17,7 @@ import Foundation
 
 public typealias JSONObject = _Helpers.JSONObject
 
-public actor RealtimeClient {
+public final class RealtimeClient: Sendable {
   public struct Configuration: Sendable {
     var url: URL
     var apiKey: String
@@ -69,15 +69,29 @@ public actor RealtimeClient {
   let config: Configuration
   let ws: any WebSocketClient
 
-  var accessToken: String?
-  var ref = 0
-  var pendingHeartbeatRef: Int?
+  struct MutableState {
+    var ref = 0
+    var pendingHeartbeatRef: Int?
+    var subscriptions: [String: RealtimeChannel] = [:]
+    var accessToken: String?
+    var heartbeatTask: Task<Void, Never>?
+    var messageTask: Task<Void, Never>?
+    var connectionTask: Task<Void, Never>?
+  }
 
-  var heartbeatTask: Task<Void, Never>?
-  var messageTask: Task<Void, Never>?
-  var connectionTask: Task<Void, Never>?
+  var accessToken: String? {
+    mutableState.accessToken
+  }
 
-  public private(set) var subscriptions: [String: RealtimeChannel] = [:]
+  var pendingHeartbeatRef: Int? { mutableState.pendingHeartbeatRef }
+  var heartbeatTask: Task<Void, Never>? { mutableState.heartbeatTask }
+  var messageTask: Task<Void, Never>? { mutableState.messageTask }
+
+  private let mutableState = LockIsolated(MutableState())
+
+  public var subscriptions: [String: RealtimeChannel] {
+    mutableState.subscriptions
+  }
 
   private let statusEventEmitter = EventEmitter<Status>(initialEvent: .disconnected)
 
@@ -96,7 +110,7 @@ public actor RealtimeClient {
     statusEventEmitter.attach(listener)
   }
 
-  public init(config: Configuration) {
+  public convenience init(config: Configuration) {
     self.init(config: config, ws: WebSocket(config: config))
   }
 
@@ -104,17 +118,21 @@ public actor RealtimeClient {
     self.config = config
     self.ws = ws
 
-    if let customJWT = config.headers["Authorization"]?.split(separator: " ").last {
-      accessToken = String(customJWT)
-    } else {
-      accessToken = config.apiKey
+    mutableState.withValue {
+      if let customJWT = config.headers["Authorization"]?.split(separator: " ").last {
+        $0.accessToken = String(customJWT)
+      } else {
+        $0.accessToken = config.apiKey
+      }
     }
   }
 
   deinit {
-    heartbeatTask?.cancel()
-    messageTask?.cancel()
-    subscriptions = [:]
+    mutableState.withValue {
+      $0.heartbeatTask?.cancel()
+      $0.messageTask?.cancel()
+      $0.subscriptions = [:]
+    }
   }
 
   public func connect() async {
@@ -123,7 +141,7 @@ public actor RealtimeClient {
 
   func connect(reconnect: Bool) async {
     if status == .disconnected {
-      connectionTask = Task {
+      let connectionTask = Task {
         if reconnect {
           try? await Task.sleep(nanoseconds: NSEC_PER_SEC * UInt64(config.reconnectDelay))
 
@@ -156,6 +174,9 @@ public actor RealtimeClient {
             await onError(error)
           }
         }
+      }
+      mutableState.withValue {
+        $0.connectionTask = connectionTask
       }
     }
 
@@ -212,15 +233,19 @@ public actor RealtimeClient {
   }
 
   public func addChannel(_ channel: RealtimeChannel) {
-    subscriptions[channel.topic] = channel
+    mutableState.withValue {
+      $0.subscriptions[channel.topic] = channel
+    }
   }
 
   public func removeChannel(_ channel: RealtimeChannel) async {
-    if await channel.status == .subscribed {
+    if channel.status == .subscribed {
       await channel.unsubscribe()
     }
 
-    subscriptions[channel.topic] = nil
+    mutableState.withValue {
+      $0.subscriptions[channel.topic] = nil
+    }
 
     if subscriptions.isEmpty {
       config.logger?.debug("No more subscribed channel in socket")
@@ -241,7 +266,7 @@ public actor RealtimeClient {
   }
 
   private func listenForMessages() {
-    messageTask = Task { [weak self] in
+    let messageTask = Task { [weak self] in
       guard let self else { return }
 
       do {
@@ -250,7 +275,7 @@ public actor RealtimeClient {
             return
           }
 
-          await onMessage(message)
+          onMessage(message)
         }
       } catch {
         config.logger?.debug(
@@ -259,10 +284,13 @@ public actor RealtimeClient {
         await reconnect()
       }
     }
+    mutableState.withValue {
+      $0.messageTask = messageTask
+    }
   }
 
   private func startHeartbeating() {
-    heartbeatTask = Task { [weak self, config] in
+    let heartbeatTask = Task { [weak self, config] in
       while !Task.isCancelled {
         try? await Task.sleep(nanoseconds: NSEC_PER_SEC * UInt64(config.heartbeatInterval))
         if Task.isCancelled {
@@ -271,60 +299,74 @@ public actor RealtimeClient {
         await self?.sendHeartbeat()
       }
     }
+    mutableState.withValue {
+      $0.heartbeatTask = heartbeatTask
+    }
   }
 
   private func sendHeartbeat() async {
-    if pendingHeartbeatRef != nil {
-      pendingHeartbeatRef = nil
-      config.logger?.debug("Heartbeat timeout")
-
-      await reconnect()
-      return
+    let pendingHeartbeatRef = mutableState.withValue {
+      if $0.pendingHeartbeatRef != nil {
+        $0.pendingHeartbeatRef = nil
+      } else {
+        $0.pendingHeartbeatRef = makeRef()
+      }
+      return $0.pendingHeartbeatRef
     }
 
-    pendingHeartbeatRef = makeRef()
-
-    await send(
-      RealtimeMessage(
-        joinRef: nil,
-        ref: pendingHeartbeatRef?.description,
-        topic: "phoenix",
-        event: "heartbeat",
-        payload: [:]
+    if let pendingHeartbeatRef {
+      await send(
+        RealtimeMessage(
+          joinRef: nil,
+          ref: pendingHeartbeatRef.description,
+          topic: "phoenix",
+          event: "heartbeat",
+          payload: [:]
+        )
       )
-    )
+    } else {
+      config.logger?.debug("Heartbeat timeout")
+      await reconnect()
+    }
   }
 
   public func disconnect() {
     config.logger?.debug("Closing WebSocket connection")
-    ref = 0
-    messageTask?.cancel()
-    heartbeatTask?.cancel()
-    connectionTask?.cancel()
+    mutableState.withValue {
+      $0.ref = 0
+      $0.messageTask?.cancel()
+      $0.heartbeatTask?.cancel()
+      $0.connectionTask?.cancel()
+    }
+
     ws.disconnect()
     status = .disconnected
   }
 
   public func setAuth(_ token: String?) async {
-    accessToken = token
+    mutableState.withValue {
+      $0.accessToken = token
+    }
 
     for channel in subscriptions.values {
-      if let token, await channel.status == .subscribed {
+      if let token, channel.status == .subscribed {
         await channel.updateAuth(jwt: token)
       }
     }
   }
 
-  private func onMessage(_ message: RealtimeMessage) async {
-    let channel = subscriptions[message.topic]
+  private func onMessage(_ message: RealtimeMessage) {
+    mutableState.withValue {
+      let channel = $0.subscriptions[message.topic]
 
-    if let ref = message.ref, Int(ref) == pendingHeartbeatRef {
-      pendingHeartbeatRef = nil
-      config.logger?.debug("heartbeat received")
-    } else {
-      config.logger?
-        .debug("Received event \(message.event) for channel \(channel?.topic ?? "null")")
-      await channel?.onMessage(message)
+      if let ref = message.ref, Int(ref) == $0.pendingHeartbeatRef {
+        $0.pendingHeartbeatRef = nil
+        config.logger?.debug("heartbeat received")
+      } else {
+        config.logger?
+          .debug("Received event \(message.event) for channel \(channel?.topic ?? "null")")
+        channel?.onMessage(message)
+      }
     }
   }
 
@@ -343,8 +385,10 @@ public actor RealtimeClient {
   }
 
   func makeRef() -> Int {
-    ref += 1
-    return ref
+    mutableState.withValue {
+      $0.ref += 1
+      return $0.ref
+    }
   }
 }
 

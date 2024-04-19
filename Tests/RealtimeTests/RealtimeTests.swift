@@ -34,23 +34,20 @@ final class RealtimeTests: XCTestCase {
   }
 
   func testBehavior() async {
-    let channel = await sut.channel("public:messages")
-    _ = await channel.postgresChange(InsertAction.self, table: "messages")
-    _ = await channel.postgresChange(UpdateAction.self, table: "messages")
-    _ = await channel.postgresChange(DeleteAction.self, table: "messages")
+    let channel = sut.channel("public:messages")
+    _ = channel.postgresChange(InsertAction.self, table: "messages")
+    _ = channel.postgresChange(UpdateAction.self, table: "messages")
+    _ = channel.postgresChange(DeleteAction.self, table: "messages")
 
-    let statusChange = await sut.statusChange
+    let statusChange = sut.statusChange
 
     await connectSocketAndWait()
 
     let status = await statusChange.prefix(3).collect()
     XCTAssertEqual(status, [.disconnected, .connecting, .connected])
 
-    let messageTask = await sut.messageTask
-    XCTAssertNotNil(messageTask)
-
-    let heartbeatTask = await sut.heartbeatTask
-    XCTAssertNotNil(heartbeatTask)
+    XCTAssertNotNil(sut.messageTask)
+    XCTAssertNotNil(sut.heartbeatTask)
 
     let subscription = Task {
       await channel.subscribe()
@@ -105,7 +102,7 @@ final class RealtimeTests: XCTestCase {
     let statuses = LockIsolated<[RealtimeClient.Status]>([])
 
     Task {
-      for await status in await sut.statusChange {
+      for await status in sut.statusChange {
         statuses.withValue {
           $0.append(status)
         }
@@ -116,7 +113,7 @@ final class RealtimeTests: XCTestCase {
 
     await fulfillment(of: [sentHeartbeatExpectation], timeout: 2)
 
-    let pendingHeartbeatRef = await sut.pendingHeartbeatRef
+    let pendingHeartbeatRef = sut.pendingHeartbeatRef
     XCTAssertNotNil(pendingHeartbeatRef)
 
     // Wait until next heartbeat
