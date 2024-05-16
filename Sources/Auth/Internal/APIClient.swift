@@ -8,6 +8,8 @@ extension HTTPClient {
       interceptors.append(LoggerInterceptor(logger: logger))
     }
 
+    interceptors.append(RetryRequestInterceptor.default)
+
     self.init(fetch: configuration.fetch, interceptors: interceptors)
   }
 }
