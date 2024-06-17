@@ -26,9 +26,16 @@ public final class SupabaseClient: Sendable {
   let databaseURL: URL
   let functionsURL: URL
 
-  /// Supabase Auth allows you to create and manage user sessions for access to data that is secured
-  /// by access policies.
-  public let auth: AuthClient
+  private let _auth: AuthClient
+
+  /// Supabase Auth allows you to create and manage user sessions for access to data that is secured by access policies.
+  public var auth: AuthClient {
+    precondition(
+      options.auth.accessToken == nil,
+      "Supabase Client is configured with the auth.accessToken option, accessing supabase.auth is not possible."
+    )
+    return _auth
+  }
 
   var rest: PostgrestClient {
     mutableState.withValue {
@@ -142,7 +149,7 @@ public final class SupabaseClient: Sendable {
     ])
     .merged(with: HTTPHeaders(options.global.headers))
 
-    auth = AuthClient(
+    _auth = AuthClient(
       url: supabaseURL.appendingPathComponent("/auth/v1"),
       headers: defaultHeaders.dictionary,
       flowType: options.auth.flowType,
@@ -178,7 +185,9 @@ public final class SupabaseClient: Sendable {
       options: realtimeOptions
     )
 
-    listenForAuthEvents()
+    if options.auth.accessToken == nil {
+      listenForAuthEvents()
+    }
   }
 
   /// Performs a query on a table or a view.
@@ -228,9 +237,7 @@ public final class SupabaseClient: Sendable {
 
   /// Returns all Realtime channels.
   public var channels: [RealtimeChannelV2] {
-    get async {
-      await Array(realtimeV2.subscriptions.values)
-    }
+    Array(realtimeV2.subscriptions.values)
   }
 
   /// Creates a Realtime channel with Broadcast, Presence, and Postgres Changes.
@@ -240,8 +247,8 @@ public final class SupabaseClient: Sendable {
   public func channel(
     _ name: String,
     options: @Sendable (inout RealtimeChannelConfig) -> Void = { _ in }
-  ) async -> RealtimeChannelV2 {
-    await realtimeV2.channel(name, options: options)
+  ) -> RealtimeChannelV2 {
+    realtimeV2.channel(name, options: options)
   }
 
   /// Unsubscribes and removes Realtime channel from Realtime client.
@@ -328,9 +335,15 @@ public final class SupabaseClient: Sendable {
   }
 
   private func adapt(request: URLRequest) async -> URLRequest {
+    let token: String? = if let accessToken = options.auth.accessToken {
+      try? await accessToken()
+    } else {
+      try? await auth.session.accessToken
+    }
+
     var request = request
-    if let accessToken = try? await auth.session.accessToken {
-      request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    if let token {
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
     return request
   }
