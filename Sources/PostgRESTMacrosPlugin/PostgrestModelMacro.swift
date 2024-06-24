@@ -15,41 +15,11 @@ import SwiftSyntaxMacros
   import SwiftSyntaxMacroExpansion
 #endif
 
-public enum PostgrestModelMacro: MemberMacro, MemberAttributeMacro {
+public enum PostgrestModelMacro {
   static let moduleName = "PostgREST"
   static let conformanceName = "PostgrestModel"
   static var qualifiedConformanceName: String { "\(moduleName).\(conformanceName)" }
   static var conformanceNames: [String] { [conformanceName, qualifiedConformanceName] }
-
-  public static func expansion(
-    of _: AttributeSyntax,
-    attachedTo _: some DeclGroupSyntax,
-    providingAttributesFor _: some DeclSyntaxProtocol,
-    in _: some MacroExpansionContext
-  ) throws -> [AttributeSyntax] {
-    []
-  }
-
-  public static func expansion(
-    of node: AttributeSyntax,
-    providingMembersOf declaration: some DeclGroupSyntax,
-    in context: some MacroExpansionContext
-  ) throws -> [DeclSyntax] {
-    guard let declaration = declaration.as(StructDeclSyntax.self) else {
-      context.diagnose(
-        Diagnostic(
-          node: declaration,
-          message: MacroExpansionErrorMessage(
-            "'@PostgrestModel' can only be applied to struct types.'"
-          )
-        )
-      )
-      return []
-    }
-
-    return [
-    ]
-  }
 }
 
 extension PostgrestModelMacro: ExtensionMacro {
@@ -66,54 +36,149 @@ extension PostgrestModelMacro: ExtensionMacro {
       return []
     }
 
-    guard let arguments = node.arguments?.as(LabeledExprListSyntax.self),
-          let tableNameArgument = arguments.first(where: { $0.label?.trimmedDescription == "tableName" })
-    else {
-      return []
-    }
-
-    let tableName = tableNameArgument.expression.trimmedDescription
-
     let ext: DeclSyntax = """
-    extension \(type.trimmed): \(raw: Self.qualifiedConformanceName) {
-      static var tableName: String {
-        \(raw: tableName)
-      }
-
-      enum CodingKeys: String, CodingKey {
-
-      }
-
-      struct Attributes {
-
-      }
-
-      static var attributes: Attributes {
-        Attributes()
-      }
-
-      struct TypedAttributes {
-
-      }
-
-      static var typedAttributes: TypedAttributes {
-        TypedAttributes()
-      }
-
-      @PostgrestInsertModel
-      struct Insert {
-
-      }
-
-      @PostgrestUpdateModel
-      struct Update {
-
-      }
-    }
+    extension \(type.trimmed): \(raw: Self.qualifiedConformanceName) {}
     """
     return [ext.cast(ExtensionDeclSyntax.self)]
   }
 }
+
+extension PostgrestModelMacro: MemberMacro {
+  public static func expansion(
+    of node: AttributeSyntax,
+    providingMembersOf declaration: some DeclGroupSyntax,
+    in _: some MacroExpansionContext
+  ) throws -> [DeclSyntax] {
+    guard let arguments = node.arguments?.as(LabeledExprListSyntax.self) else { return [] }
+
+    guard let tableName = arguments.first(where: { $0.label?.trimmedDescription == "tableName" })?.expression.trimmedDescription else { return [] }
+
+    return [
+      generateCodingKeysEnumDecl(declaration: declaration),
+      generateSchemaMetadataEnumDecl(tableName: tableName),
+      generateInsertModelDecl(declaration: declaration),
+      generateUpdateModelDecl(),
+    ]
+  }
+
+  private static func generateCodingKeysEnumDecl(
+    declaration: some DeclGroupSyntax
+  ) -> DeclSyntax {
+    let members = declaration.memberBlock.members.compactMap { $0.decl.as(VariableDeclSyntax.self) }
+    let bindings = members.compactMap {
+      $0.bindings.first?.pattern.trimmedDescription
+    }
+
+    let codingKeysDecl: DeclSyntax = """
+    enum CodingKeys: String, CodingKey {
+      \(raw: bindings.map { "case \($0) = \"\($0)\"" }.joined(separator: "\n"))
+    }
+    """
+
+    return codingKeysDecl
+  }
+
+  private static func generateSchemaMetadataEnumDecl(
+    tableName: String
+  ) -> DeclSyntax {
+    let tableNameDecl: DeclSyntax = """
+    static let tableName = \(raw: tableName)
+    """
+
+    let attributesStructDecl: DeclSyntax = """
+    struct Attributes {}
+    """
+
+    let typedAttributesStructDecl: DeclSyntax = """
+    struct TypedAttributes {}
+    """
+
+    let enumMetadataDecl: DeclSyntax = """
+    enum Metadata: SchemaMetadata {
+    \(tableNameDecl)
+
+    static let attributes = Attributes()
+    \(attributesStructDecl)
+
+    static let typedAttributes = TypedAttributes()
+    \(typedAttributesStructDecl)
+    }
+    """
+
+    return enumMetadataDecl
+  }
+
+  private static func generateInsertModelDecl(declaration: some DeclGroupSyntax) -> DeclSyntax {
+    let members: [DeclSyntax] = declaration.memberBlock.members
+      .compactMap { $0.decl.as(VariableDeclSyntax.self) }
+      .compactMap(\.bindings.first)
+      .map {
+        let propertyName = $0.pattern.trimmedDescription
+
+        var type: OptionalTypeSyntax? = if let optionalType = $0.typeAnnotation?.type.as(OptionalTypeSyntax.self) {
+          optionalType
+        } else {
+          $0.typeAnnotation.map { OptionalTypeSyntax(wrappedType: $0.type) }
+        }
+
+        return """
+        let \(raw: propertyName): \(raw: type?.trimmedDescription ?? "")
+        """
+      }
+
+    let insertModelDecl: DeclSyntax = """
+    struct Insert {
+    \(raw: members.map(\.trimmedDescription).joined(separator: "\n"))
+    }
+    """
+
+    return insertModelDecl
+  }
+
+  private static func generateUpdateModelDecl() -> DeclSyntax {
+    let updateModelDecl: DeclSyntax = """
+    struct Update {}
+    """
+
+    return updateModelDecl
+  }
+}
+
+/*
+ static var tableName: String {
+   \(raw: tableName)
+ }
+
+ enum CodingKeys: String, CodingKey {
+
+ }
+
+ struct Attributes {
+
+ }
+
+ static var attributes: Attributes {
+   Attributes()
+ }
+
+ struct TypedAttributes {
+
+ }
+
+ static var typedAttributes: TypedAttributes {
+   TypedAttributes()
+ }
+
+ @PostgrestInsertModel
+ struct Insert {
+
+ }
+
+ @PostgrestUpdateModel
+ struct Update {
+
+ }
+ */
 
 extension AttributeListSyntax {
   var availability: AttributeListSyntax? {

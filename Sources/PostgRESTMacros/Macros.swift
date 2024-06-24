@@ -9,4 +9,4 @@ import Foundation
 
 @attached(member)
 @attached(memberAttribute)
-public macro PostgrestModel(_ tableName: String) = #externalMacro(module: "PostgRESTMacrosPlugin", type: "PostgrestModelMacro")
+public macro PostgrestModel(tableName: String) = #externalMacro(module: "PostgRESTMacrosPlugin", type: "PostgrestModelMacro")

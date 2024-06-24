@@ -12,16 +12,6 @@ import XCTest
 class PostgrestTypedTests: XCTestCase {
   let client = PostgrestClient(url: URL(string: "http://localhost:54321/rest")!, logger: nil)
 
-  func testBasics() async throws {
-//    let query = try await client
-//      .from(Book.self)
-//      .select(\.id, \.name)
-//      .not(\.id, UUID())
-//      .order(\.name)
-//      .single()
-//      .execute()
-  }
-
   func testSelect() {
     var query = client.from(Book.self).select(\.id, \.name)
     XCTAssertEqual(query.request.method, .get)
@@ -47,7 +37,7 @@ class PostgrestTypedTests: XCTestCase {
       authorId: UUID()
     )
 
-    let encodedData = try book.encoded()
+    let encodedData = try Book.Insert.encoder.encode(book)
 
     let query = try client.from(Book.self)
       .insert(book)
@@ -78,7 +68,7 @@ class PostgrestTypedTests: XCTestCase {
       ),
     ]
 
-    let encodedData = try books.encoded()
+    let encodedData = try Book.Insert.encoder.encode(books)
 
     let query = try client.from(Book.self)
       .insert(books)
@@ -118,58 +108,62 @@ struct Book {
 }
 
 extension Author: PostgrestModel {
-  static var tableName: String {
-    "authors"
+  enum Metadata: SchemaMetadata {
+    static var tableName: String {
+      "authors"
+    }
+
+    struct Attributes {
+      let id = AnyPropertyMetadata(codingKey: CodingKeys.id, keyPath: \Author.id)
+      let name = AnyPropertyMetadata(codingKey: CodingKeys.name, keyPath: \Author.name)
+    }
+
+    static var attributes = Attributes()
+
+    struct TypedAttributes {
+      let id = PropertyMetadata(codingKey: CodingKeys.id, keyPath: \Author.id)
+      let name = PropertyMetadata(codingKey: CodingKeys.name, keyPath: \Author.name)
+    }
+
+    static var typedAttributes = TypedAttributes()
   }
+
+  static var schemaMetadata: Metadata.Type { Metadata.self }
 
   enum CodingKeys: String, CodingKey {
     case id, name
   }
 
-  struct Attributes {
-    let id = AnyAttributeMetadata(codingKey: CodingKeys.id, keyPath: \Author.id)
-    let name = AnyAttributeMetadata(codingKey: CodingKeys.name, keyPath: \Author.name)
-  }
-
-  static var attributes = Attributes()
-
-  struct TypedAttributes {
-    let id = AttributeMetadata(codingKey: CodingKeys.id, keyPath: \Author.id)
-    let name = AttributeMetadata(codingKey: CodingKeys.name, keyPath: \Author.name)
-  }
-
-  static var typedAttributes = TypedAttributes()
-
-  struct Insert: PostgrestInsertModel {
+  struct Insert: PostgrestType & PostgrestEncodable {
     var id: UUID?
     var name: String
 
-    var attributesMetadata: [AnyAttributeMetadata] {
-      var attributes = [AnyAttributeMetadata]()
+    var propertiesMetadata: [AnyPropertyMetadata] {
+      var attributes = [AnyPropertyMetadata]()
 
       if id != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.id, keyPath: \Insert.id))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.id, keyPath: \Insert.id))
       }
 
-      attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.name, keyPath: \Insert.name))
+      attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.name, keyPath: \Insert.name))
 
       return attributes
     }
   }
 
-  struct Update: PostgrestUpdateModel {
+  struct Update: PostgrestType & PostgrestEncodable {
     var id: UUID?
     var name: String?
 
-    var attributesMetadata: [AnyAttributeMetadata] {
-      var attributes = [AnyAttributeMetadata]()
+    var propertiesMetadata: [AnyPropertyMetadata] {
+      var attributes = [AnyPropertyMetadata]()
 
       if id != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.id, keyPath: \Update.id))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.id, keyPath: \Update.id))
       }
 
       if name != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.name, keyPath: \Update.name))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.name, keyPath: \Update.name))
       }
 
       return attributes
@@ -178,8 +172,25 @@ extension Author: PostgrestModel {
 }
 
 extension Book: PostgrestModel {
-  static var tableName: String {
-    "books"
+  enum Metadata: SchemaMetadata {
+    static var tableName: String {
+      "books"
+    }
+
+    struct Attributes {
+      let id = AnyPropertyMetadata(codingKey: CodingKeys.id, keyPath: \Book.id)
+      let name = AnyPropertyMetadata(codingKey: CodingKeys.name, keyPath: \Book.name)
+      let authorId = AnyPropertyMetadata(codingKey: CodingKeys.authorId, keyPath: \Book.authorId)
+    }
+
+    struct TypedAttributes {
+      let id = PropertyMetadata(codingKey: CodingKeys.id, keyPath: \Book.id)
+      let name = PropertyMetadata(codingKey: CodingKeys.name, keyPath: \Book.name)
+      let authorId = PropertyMetadata(codingKey: CodingKeys.authorId, keyPath: \Book.authorId)
+    }
+
+    static let attributes = Attributes()
+    static let typedAttributes = TypedAttributes()
   }
 
   enum CodingKeys: String, CodingKey {
@@ -189,22 +200,7 @@ extension Book: PostgrestModel {
     case author
   }
 
-  struct Attributes {
-    let id = AnyAttributeMetadata(codingKey: CodingKeys.id, keyPath: \Book.id)
-    let name = AnyAttributeMetadata(codingKey: CodingKeys.name, keyPath: \Book.name)
-    let authorId = AnyAttributeMetadata(codingKey: CodingKeys.authorId, keyPath: \Book.authorId)
-  }
-
-  struct TypedAttributes {
-    let id = AttributeMetadata(codingKey: CodingKeys.id, keyPath: \Book.id)
-    let name = AttributeMetadata(codingKey: CodingKeys.name, keyPath: \Book.name)
-    let authorId = AttributeMetadata(codingKey: CodingKeys.authorId, keyPath: \Book.authorId)
-  }
-
-  static let attributes = Attributes()
-  static let typedAttributes = TypedAttributes()
-
-  struct Insert: PostgrestInsertModel {
+  struct Insert: PostgrestType, PostgrestEncodable {
     var id: UUID?
     var name: String
     var authorId: UUID
@@ -215,21 +211,21 @@ extension Book: PostgrestModel {
       case authorId = "author_id"
     }
 
-    var attributesMetadata: [AnyAttributeMetadata] {
-      var attributes = [AnyAttributeMetadata]()
+    var propertiesMetadata: [AnyPropertyMetadata] {
+      var attributes = [AnyPropertyMetadata]()
 
       if id != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.id, keyPath: \Insert.id))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.id, keyPath: \Insert.id))
       }
 
-      attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.name, keyPath: \Insert.name))
-      attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.authorId, keyPath: \Insert.authorId))
+      attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.name, keyPath: \Insert.name))
+      attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.authorId, keyPath: \Insert.authorId))
 
       return attributes
     }
   }
 
-  struct Update: PostgrestUpdateModel {
+  struct Update: PostgrestType, PostgrestEncodable {
     var id: UUID?
     var name: String?
     var authorId: UUID?
@@ -240,19 +236,19 @@ extension Book: PostgrestModel {
       case authorId = "author_id"
     }
 
-    var attributesMetadata: [AnyAttributeMetadata] {
-      var attributes = [AnyAttributeMetadata]()
+    var propertiesMetadata: [AnyPropertyMetadata] {
+      var attributes = [AnyPropertyMetadata]()
 
       if id != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.id, keyPath: \Update.id))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.id, keyPath: \Update.id))
       }
 
       if name != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.name, keyPath: \Update.name))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.name, keyPath: \Update.name))
       }
 
       if authorId != nil {
-        attributes.append(AnyAttributeMetadata(codingKey: CodingKeys.authorId, keyPath: \Update.authorId))
+        attributes.append(AnyPropertyMetadata(codingKey: CodingKeys.authorId, keyPath: \Update.authorId))
       }
 
       return attributes

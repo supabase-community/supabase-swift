@@ -14,7 +14,9 @@ final class PostgrestModelMacroTests: BaseTestCase {
   override func invokeTest() {
     withMacroTesting(
       isRecording: true,
-      macros: [PostgrestModelMacro.self]
+      macros: [
+        PostgrestModelMacro.self,
+      ]
     ) {
       super.invokeTest()
     }
@@ -27,6 +29,7 @@ final class PostgrestModelMacroTests: BaseTestCase {
       struct Book {
         let id: UUID
         var name: String
+        var authorId: UUID?
       }
       """
     } expansion: {
@@ -34,42 +37,37 @@ final class PostgrestModelMacroTests: BaseTestCase {
       struct Book {
         let id: UUID
         var name: String
+        var authorId: UUID?
+
+        enum CodingKeys: String, CodingKey {
+          case id = "id"
+          case name = "name"
+          case authorId = "authorId"
+        }
+
+        enum Metadata: SchemaMetadata {
+          static let tableName = "books"
+
+          static let attributes = Attributes()
+          struct Attributes {
+          }
+
+          static let typedAttributes = TypedAttributes()
+          struct TypedAttributes {
+          }
+        }
+
+        struct Insert {
+          let id: UUID?
+          let name: String?
+          let authorId: UUID?
+        }
+
+        struct Update {
+        }
       }
 
       extension Book: PostgREST.PostgrestModel {
-        static var tableName: String {
-          "books"
-        }
-
-        enum CodingKeys: String, CodingKey {
-
-        }
-
-        struct Attributes {
-
-        }
-
-        static var attributes: Attributes {
-          Attributes()
-        }
-
-        struct TypedAttributes {
-
-        }
-
-        static var typedAttributes: TypedAttributes {
-          TypedAttributes()
-        }
-
-        @PostgrestInsertModel
-        struct Insert {
-
-        }
-
-        @PostgrestUpdateModel
-        struct Update {
-
-        }
       }
       """
     }

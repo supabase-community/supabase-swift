@@ -63,6 +63,16 @@ extension URL {
   }
 }
 
+extension [URLQueryItem] {
+  package mutating func appendOrUpdate(_ queryItem: URLQueryItem) {
+    if let index = firstIndex(where: { $0.name == queryItem.name }) {
+      self[index] = queryItem
+    } else {
+      append(queryItem)
+    }
+  }
+}
+
 func escape(_ string: String) -> String {
   string.addingPercentEncoding(withAllowedCharacters: .sbURLQueryAllowed) ?? string
 }
