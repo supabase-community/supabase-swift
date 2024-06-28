@@ -76,11 +76,18 @@ final class SupabaseClientTests: XCTestCase {
     XCTAssertEqual(realtimeURL.absoluteString, "https://project-ref.supabase.co/realtime/v1")
 
     let realtimeOptions = client.realtimeV2.options
-    let expectedRealtimeHeader = client.defaultHeaders.merged(with: ["custom_realtime_header_key": "custom_realtime_header_value"])
+    let expectedRealtimeHeader = client.defaultHeaders.merged(
+      with: ["custom_realtime_header_key": "custom_realtime_header_value"]
+    )
     XCTAssertNoDifference(realtimeOptions.headers, expectedRealtimeHeader)
     XCTAssertIdentical(realtimeOptions.logger as? Logger, logger)
 
     XCTAssertFalse(client.auth.configuration.autoRefreshToken)
+
+    XCTAssertNotNil(
+      client.mutableState.listenForAuthEventsTask,
+      "should listen for internal auth events"
+    )
   }
 
   #if !os(Linux)
@@ -91,4 +98,33 @@ final class SupabaseClientTests: XCTestCase {
       )
     }
   #endif
+
+  func testClientInitWithCustomAccessToken() async {
+    let localStorage = AuthLocalStorageMock()
+
+    let client = SupabaseClient(
+      supabaseURL: URL(string: "https://project-ref.supabase.co")!,
+      supabaseKey: "ANON_KEY",
+      options: .init(
+        auth: .init(
+          storage: localStorage,
+          accessToken: { "jwt" }
+        )
+      )
+    )
+
+    XCTAssertNil(
+      client.mutableState.listenForAuthEventsTask,
+      "should not listen for internal auth events when using 3p authentication"
+    )
+
+    overridedPreconditionHandler.setValue { _, message, _, _ in
+      XCTAssertEqual(
+        message(),
+        "Supabase Client is configured with the auth.accessToken option, accessing supabase.auth is not possible."
+      )
+    }
+
+    _ = client.auth
+  }
 }
